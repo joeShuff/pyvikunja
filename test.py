@@ -1,7 +1,7 @@
 import asyncio
 import os
 
-from viikunja_test.api import VikunjaAPI
+from api import VikunjaAPI
 
 base_url = os.getenv("VIKUNJA_BASEURL")
 token = os.getenv("VIKUNJA_TOKEN")
@@ -20,6 +20,9 @@ async def main():
         for task in tasks:
             full_details = await api.get_task(task_id=task.id)
             print(f"  Task: {task.title} - {full_details}")
+
+    test_task = await api.get_task(12)
+    await test_task.mark_done()
 
     # Get all labels
     labels = await api.get_labels()

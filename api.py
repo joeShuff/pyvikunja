@@ -64,8 +64,9 @@ class VikunjaAPI:
                                        params={"page": page, "per_page": per_page})
         return [Task(self, task_data) for task_data in response or []]
 
-    async def get_task(self, task_id: int) -> Optional[Dict]:
-        return await self._request("GET", f"/tasks/{task_id}")
+    async def get_task(self, task_id: int) -> Task:
+        data = await self._request("GET", f"/tasks/{task_id}")
+        return Task(self, data)
 
     async def create_task(self, project_id: int, task: Dict) -> Optional[Dict]:
         return await self._request("PUT", f"/projects/{project_id}/tasks", data=task)
