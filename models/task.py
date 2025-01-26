@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 from typing import Dict, Optional, List
 
 from models.enum.repeat_mode import RepeatMode
+from models.enum.task_priority import Priority
 from models.models import BaseModel
 
 
@@ -23,7 +24,11 @@ class Task(BaseModel):
         self.hex_color: Optional[str] = data.get('hex_color')
         self.is_favorite: bool = data.get('is_favorite', False)
         self.percent_done: int = data.get('percent_done', 0)
-        self.priority: int = data.get('priority', 0)
+
+        priority_value = data.get('priority', 0)  # Default to 0 if missing
+        self.priority: Optional[Priority] = Priority(
+            priority_value) if priority_value in Priority._value2member_map_ else None
+
         self.project_id: Optional[int] = data.get('project_id')
         self.labels: List[Label] = [Label(label_data) for label_data in data.get('labels', []) or []]
         self.assignees: List[User] = [User(user_data) for user_data in data.get('assignees', []) or []]
