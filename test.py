@@ -1,7 +1,10 @@
 import asyncio
+import datetime
 import os
 
 from api import VikunjaAPI
+from models.enum.repeat_mode import RepeatMode
+from models.enum.task_priority import Priority
 
 base_url = os.getenv("VIKUNJA_BASEURL")
 token = os.getenv("VIKUNJA_TOKEN")
@@ -22,17 +25,17 @@ async def main():
             print(f"  Task: {task.title} - {full_details}")
 
     test_task = await api.get_task(12)
-    await test_task.mark_done()
 
-    # Get all labels
-    labels = await api.get_labels()
-    for label in labels:
-        print(f"Label: {label.title}")
+    # await test_task.set_priority(3)
+    await test_task.set_color("ffff00")
+    await test_task.set_progress(40)
+    await test_task.set_due_date(datetime.datetime.now() + datetime.timedelta(days=4))
+    await test_task.set_end_date(datetime.datetime.now() + datetime.timedelta(weeks=52))
+    await test_task.set_start_date(datetime.datetime.now() - datetime.timedelta(weeks=1))
+    await test_task.set_is_favorite(True)
+    await test_task.set_priority(Priority.DO_IT_NOW)
+    await test_task.set_repeating_interval(datetime.timedelta(days=4), mode=RepeatMode.FROM_CURRENT_DATE)
 
-    # Get all teams
-    teams = await api.get_teams()
-    for team in teams:
-        print(f"Team: {team.name}")
 
 # Usage example
 if __name__ == "__main__":

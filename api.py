@@ -1,11 +1,12 @@
-import asyncio
-import os
 import logging
-import httpx
 from typing import List, Dict, Any, Optional
-from datetime import datetime
 
-from models import Project, Team, Label, Task
+import httpx
+
+from models.label import Label
+from models.project import Project
+from models.task import Task
+from models.team import Team
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -108,7 +109,7 @@ class VikunjaAPI:
         return Team(self, response)
 
     async def update_team(self, team_id: int, team: Dict) -> Optional[Team]:
-        return await self._request("POST", f"/teams/{team_id}", data=team)
+        response = await self._request("POST", f"/teams/{team_id}", data=team)
         return Team(self, response)
 
     async def delete_team(self, team_id: int) -> Optional[Team]:
