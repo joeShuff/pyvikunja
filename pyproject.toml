@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools", "wheel"]  # Dependencies for building the package
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "py-vikunja"
+version = "0.1.0"
+description = "A Python wrapper for Vikunja API"
+authors = [
+    {name = "Joseph Shufflebotham"}
+]
+license = {text = "MIT"}
+dependencies = [
+    "httpx==0.28.1"
+]
+
+[tool.setuptools]
+packages = ["vikunja"]  # Replace "vikunja" with your package directory
