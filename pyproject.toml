@@ -9,7 +9,7 @@ description = "A Python wrapper for Vikunja API"
 authors = [
     {name = "Joseph Shufflebotham"}
 ]
-license = {text = "MIT"}
+license = {text = "AGPL"}
 dependencies = [
     "httpx==0.28.1"
 ]

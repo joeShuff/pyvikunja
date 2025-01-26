@@ -11,6 +11,19 @@ jobs:
     - uses: actions/checkout@v4
       with:
         persist-credentials: false
+
+    - name: Extract version from tag
+      if: startsWith(github.ref, 'refs/tags/')
+      id: extract-version
+      run: |
+        echo "VERSION=${GITHUB_REF##*/}" >> $GITHUB_ENV
+
+    - name: Update version in pyproject.toml
+      if: startsWith(github.ref, 'refs/tags/')
+      run: |
+        sed -i "s/^version = .*/version = \"${{ env.VERSION }}\"/" pyproject.toml
+        echo "Updated version in pyproject.toml to ${{ env.VERSION }}"
+
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
