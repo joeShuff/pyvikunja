@@ -51,8 +51,8 @@ class Task(BaseModel):
     async def set_is_favorite(self, is_favourite: bool) -> 'Task':
         return await self.update({'is_favorite': is_favourite})
 
-    async def set_priority(self, priority: int) -> 'Task':
-        return await self.update({'priority': priority})
+    async def set_priority(self, priority: Priority) -> 'Task':
+        return await self.update({'priority': priority.value})
 
     async def set_progress(self, percent_done: int) -> 'Task':
         return await self.update({'percent_done': percent_done / 100})
