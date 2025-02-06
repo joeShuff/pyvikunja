@@ -54,7 +54,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: pypi-release
-      url: https://pypi.org/p/py-vikunja
+      url: https://pypi.org/p/pyvikunja
     permissions:
       id-token: write  # IMPORTANT: mandatory for trusted publishing
 
@@ -110,7 +110,7 @@ jobs:
 
     environment:
       name: testpypi-release
-      url: https://test.pypi.org/p/py-vikunja
+      url: https://test.pypi.org/p/pyvikunja
 
     permissions:
       id-token: write  # IMPORTANT: mandatory for trusted publishing
