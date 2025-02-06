@@ -1,6 +1,6 @@
 from typing import Dict
 
-from models.models import BaseModel
+from pyvikunja.models.models import BaseModel
 
 
 class Team(BaseModel):

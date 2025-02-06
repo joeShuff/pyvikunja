@@ -3,7 +3,7 @@ requires = ["setuptools", "wheel"]  # Dependencies for building the package
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "py-vikunja"
+name = "pyvikunja"
 version = "0.1.0"
 description = "A Python wrapper for Vikunja API"
 authors = [

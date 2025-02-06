@@ -2,9 +2,9 @@ import asyncio
 import datetime
 import os
 
-from api import VikunjaAPI
-from models.enum.repeat_mode import RepeatMode
-from models.enum.task_priority import Priority
+from pyvikunja.api import VikunjaAPI
+from pyvikunja.models.enum.repeat_mode import RepeatMode
+from pyvikunja.models.enum.task_priority import Priority
 
 base_url = os.getenv("VIKUNJA_BASEURL")
 token = os.getenv("VIKUNJA_TOKEN")
