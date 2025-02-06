@@ -1,15 +1,15 @@
 from datetime import datetime, timedelta
 from typing import Dict, Optional, List
 
-from pyvikunja.models.models import RepeatMode
-from pyvikunja.models.models import Priority
+from pyvikunja.models.enum.repeat_mode import RepeatMode
+from pyvikunja.models.enum.task_priority import Priority
+from pyvikunja.models.label import Label
 from pyvikunja.models.models import BaseModel
+from pyvikunja.models.user import User
 
 
 class Task(BaseModel):
     def __init__(self, api: 'VikunjaAPI', data: Dict):
-        from pyvikunja.models.models import Label
-        from pyvikunja.models.models import User
 
         super().__init__(data)
         self.api = api

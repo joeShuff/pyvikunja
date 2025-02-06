@@ -3,10 +3,10 @@ from typing import List, Dict, Any, Optional
 
 import httpx
 
-from models.label import Label
-from models.project import Project
-from models.task import Task
-from models.team import Team
+from pyvikunja.models.label import Label
+from pyvikunja.models.project import Project
+from pyvikunja.models.task import Task
+from pyvikunja.models.team import Team
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)

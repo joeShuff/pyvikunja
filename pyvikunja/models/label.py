@@ -5,7 +5,7 @@ from pyvikunja.models.models import BaseModel
 
 class Label(BaseModel):
     def __init__(self, data: Dict):
-        from pyvikunja.models.models import User
+        from pyvikunja.models.user import User
 
         super().__init__(data)
         self.title: str = data.get('title', '')
