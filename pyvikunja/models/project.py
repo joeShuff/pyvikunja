@@ -1,12 +1,12 @@
 from typing import Dict, Optional, List
 
-from models.models import BaseModel
+from pyvikunja.models.models import BaseModel
 
 
 
 class Project(BaseModel):
     def __init__(self, api: 'VikunjaAPI', data: Dict):
-        from models.user import User
+        from pyvikunja.models.models import User
 
         super().__init__(data)
         self.api = api
@@ -20,7 +20,7 @@ class Project(BaseModel):
         return await self.api.get_tasks(self.id, page, per_page)
 
     async def create_task(self, task: Dict) -> 'Task':
-        from models.task import Task
+        from pyvikunja.models.models import Task
         task_data = await self.api.create_task(self.id, task)
         return Task(self.api, task_data)
 
