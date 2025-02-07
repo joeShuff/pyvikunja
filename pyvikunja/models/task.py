@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Dict, Optional, List
 
 from pyvikunja.models.enum.repeat_mode import RepeatMode
@@ -72,17 +72,26 @@ class Task(BaseModel):
 
     async def set_due_date(self, date: datetime) -> 'Task':
         # Set the task's due date in ISO format
-        iso_date = date.isoformat() + "Z"
+        if date.tzinfo is None:
+            date = date.replace(tzinfo=timezone.utc)
+
+        iso_date = str(date.isoformat())
         return await self.update({'due_date': iso_date})
 
     async def set_start_date(self, date: datetime) -> 'Task':
         # Set the task's start date in ISO format
-        iso_date = date.isoformat() + "Z"
+        if date.tzinfo is None:
+            date = date.replace(tzinfo=timezone.utc)
+
+        iso_date = str(date.isoformat())
         return await self.update({'start_date': iso_date})
 
     async def set_end_date(self, date: datetime) -> 'Task':
         # Set the task's end date in ISO format
-        iso_date = date.isoformat() + "Z"
+        if date.tzinfo is None:
+            date = date.replace(tzinfo=timezone.utc)
+
+        iso_date = str(date.isoformat())
         return await self.update({'end_date': iso_date})
 
     async def set_repeating_interval(self, interval: timedelta, mode: RepeatMode = RepeatMode.DEFAULT) -> 'Task':
