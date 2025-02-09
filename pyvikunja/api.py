@@ -74,6 +74,22 @@ class VikunjaAPI:
             logger.error(f"Unexpected error occurred: {e} | URL: {url}")
         return None
 
+    async def ping(self) -> bool:
+        """Tests if the API key is valid by calling the /projects endpoint."""
+        """Not chosen the /user endpoint here because it was always returning 401 with an API Token"""
+        url = f"{self.api_base_url}/projects"
+
+        try:
+            response = await self.client.get(url, headers=self.headers, timeout=10)
+            response.raise_for_status()
+
+            if response.status_code == 200:
+                return True
+            else:
+                raise httpx.HTTPError(f"Non-200 Response from server {response.status_code}")
+        except httpx.HTTPError as e:
+            raise e
+
     # Projects
     async def get_projects(self, page: int = 1, per_page: int = 20) -> List[Project]:
         response = await self._request("GET", "/projects", params={"page": page, "per_page": per_page})
