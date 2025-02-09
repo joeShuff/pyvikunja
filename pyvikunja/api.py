@@ -1,5 +1,6 @@
 import logging
 from typing import List, Dict, Any, Optional
+from urllib.parse import urlparse, urlunparse
 
 import httpx
 
@@ -15,6 +16,7 @@ logger = logging.getLogger(__name__)
 
 class APIError(Exception):
     """Custom exception for API-related errors."""
+
     def __init__(self, status_code: int, message: str):
         super().__init__(f"HTTP {status_code}: {message}")
         self.status_code = status_code
@@ -23,12 +25,43 @@ class APIError(Exception):
 
 class VikunjaAPI:
     def __init__(self, base_url: str, token: str):
-        self.base_url = base_url
+        self.host = self._normalize_host(base_url)
+        self.api_base_url = self._normalize_api_base_url(self.host)
         self.headers = {"Authorization": f"Bearer {token}"}
         self.client = httpx.AsyncClient()
 
-    async def _request(self, method: str, endpoint: str, params: Optional[Dict] = None, data: Optional[Dict] = None) -> Optional[Any]:
-        url = f"{self.base_url}{endpoint}"
+    @property
+    def web_ui_link(self):
+        return self.host
+
+    def _normalize_host(self, url: str) -> str:
+        """Ensures the host has a valid protocol and retains ports if provided."""
+        if "://" not in url:
+            url = f"https://{url}"  # Default to HTTPS if no scheme provided
+
+        parsed = urlparse(url)
+
+        # Default to HTTPS if no scheme is provided
+        scheme = parsed.scheme if parsed.scheme else "https"
+
+        # Ensure netloc is correctly used (handles ports)
+        netloc = parsed.netloc if parsed.netloc else parsed.path  # Handles cases where netloc is empty
+
+        # Rebuild the host URL
+        host = urlunparse((scheme, netloc, "", "", "", ""))
+
+        return host.rstrip("/")
+
+    def _normalize_api_base_url(self, host: str) -> str:
+        """Ensures the API base URL includes /api/v1."""
+        if not host.endswith("/api/v1"):
+            return f"{host}/api/v1"
+        return host
+
+
+    async def _request(self, method: str, endpoint: str, params: Optional[Dict] = None, data: Optional[Dict] = None) -> \
+    Optional[Any]:
+        url = f"{self.api_base_url}{endpoint}"
         try:
             response = await self.client.request(method, url, headers=self.headers, params=params, json=data)
             response.raise_for_status()
@@ -114,5 +147,3 @@ class VikunjaAPI:
 
     async def delete_team(self, team_id: int) -> Optional[Team]:
         return await self._request("DELETE", f"/teams/{team_id}")
-
-
