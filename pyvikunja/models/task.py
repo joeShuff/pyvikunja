@@ -33,6 +33,23 @@ class Task(BaseModel):
         self.labels: List[Label] = [Label(label_data) for label_data in data.get('labels', []) or []]
         self.assignees: List[User] = [User(user_data) for user_data in data.get('assignees', []) or []]
 
+        # Parse repeat_mode into an enum
+        self.repeat_mode: RepeatMode = self._parse_repeat_mode(data.get('repeat_mode'))
+
+        # Parse repeat_after into timedelta
+        self.repeat_after: Optional[timedelta] = self._parse_repeat_after(data.get('repeat_after'))
+
+    def _parse_repeat_mode(self, mode: Optional[int]) -> Optional[RepeatMode]:
+        """Convert repeat_mode integer into an Enum value, defaulting to NONE."""
+        try:
+            return RepeatMode(mode) if mode is not None else None
+        except ValueError:
+            return None
+
+    def _parse_repeat_after(self, seconds: Optional[int]) -> Optional[timedelta]:
+        """Convert repeat_after seconds into a timedelta."""
+        return timedelta(seconds=seconds) if seconds else None
+
     async def update(self, data: Dict) -> 'Task':
         # Merge self.data with the new data (data overrides keys in self.data)
         combined = {**self.data, **data}
@@ -94,12 +111,14 @@ class Task(BaseModel):
         iso_date = str(date.isoformat())
         return await self.update({'end_date': iso_date})
 
-    async def set_repeating_interval(self, interval: timedelta, mode: RepeatMode = RepeatMode.DEFAULT) -> 'Task':
-        # Convert the timedelta to total seconds
-        total_seconds = int(interval.total_seconds())
-        # Update the repeating interval for the task
+    async def set_repeating_interval(self, interval: Optional[timedelta] = None, mode: Optional[RepeatMode] = None) -> 'Task':
+        new_interval = interval if interval else self.repeat_after
+        total_seconds = int(new_interval.total_seconds())
+
+        new_mode = mode if mode else self.repeat_mode
+
         return await self.update({'repeat_after': total_seconds,
-                                  'repeat_mode': mode.value})
+                                  'repeat_mode': new_mode.value})
 
     async def delete_task(self) -> Dict:
         return await self.api.delete_task(self.id)
