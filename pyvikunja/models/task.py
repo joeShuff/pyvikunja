@@ -48,7 +48,11 @@ class Task(BaseModel):
 
     def _parse_repeat_after(self, seconds: Optional[int]) -> Optional[timedelta]:
         """Convert repeat_after seconds into a timedelta."""
-        return timedelta(seconds=seconds) if seconds else None
+        try:
+            return timedelta(seconds=seconds) if seconds else None
+        except:
+            # Error parsing seconds to timedelta. Possibly too large.
+            return None
 
     async def update(self, data: Dict) -> 'Task':
         # Merge self.data with the new data (data overrides keys in self.data)
