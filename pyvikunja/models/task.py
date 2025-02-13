@@ -34,10 +34,11 @@ class Task(BaseModel):
         self.assignees: List[User] = [User(user_data) for user_data in data.get('assignees', []) or []]
 
         # Parse repeat_mode into an enum
-        self.repeat_mode: RepeatMode = self._parse_repeat_mode(data.get('repeat_mode'))
+        self.repeat_mode: Optional[RepeatMode] = self._parse_repeat_mode(data.get('repeat_mode'))
 
         # Parse repeat_after into timedelta
         self.repeat_after: Optional[timedelta] = self._parse_repeat_after(data.get('repeat_after'))
+        self.repeat_enabled = self.repeat_after is not None
 
     def _parse_repeat_mode(self, mode: Optional[int]) -> Optional[RepeatMode]:
         """Convert repeat_mode integer into an Enum value, defaulting to NONE."""
@@ -115,7 +116,13 @@ class Task(BaseModel):
         iso_date = str(date.isoformat())
         return await self.update({'end_date': iso_date})
 
-    async def set_repeating_interval(self, interval: Optional[timedelta] = None, mode: Optional[RepeatMode] = None) -> 'Task':
+    async def set_repeating_enabled(self, enabled: bool):
+        return await self.update({
+            'repeat_after': None if not enabled else 3600  # 1 hour min
+        })
+
+    async def set_repeating_interval(self, interval: Optional[timedelta] = None,
+                                     mode: Optional[RepeatMode] = None) -> 'Task':
         new_interval = interval if interval else self.repeat_after
         total_seconds = int(new_interval.total_seconds())
 
