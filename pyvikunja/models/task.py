@@ -172,10 +172,10 @@ class Task(BaseModel):
 
     async def set_repeating_interval(self, interval: Optional[timedelta] = None,
                                      mode: Optional[RepeatMode] = None) -> 'Task':
-        new_interval = interval if interval else self.repeat_after
+        new_interval = interval if interval is not None else self.repeat_after
         total_seconds = int(new_interval.total_seconds())
 
-        new_mode = mode if mode else self.repeat_mode
+        new_mode = mode if mode is not None else self.repeat_mode
 
         return await self.update({'repeat_after': total_seconds,
                                   'repeat_mode': new_mode.value})
