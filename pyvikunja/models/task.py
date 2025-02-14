@@ -166,7 +166,8 @@ class Task(BaseModel):
 
     async def set_repeating_enabled(self, enabled: bool):
         return await self.update({
-            'repeat_after': None if not enabled else 3600  # 1 hour min
+            'repeat_after': None if not enabled else 3600,  # 1 hour min
+            'repeat_mode': 0
         })
 
     async def set_repeating_interval(self, interval: Optional[timedelta] = None,
