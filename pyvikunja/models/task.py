@@ -10,10 +10,58 @@ from pyvikunja.models.user import User
 
 class Task(BaseModel):
     def __init__(self, api: 'VikunjaAPI', data: Dict):
-
         super().__init__(data)
         self.api = api
+        self.id: int = -1
         self.data = data
+        self.title: str = ""
+        self.description: str = ""
+        self.done: bool = False
+        self.done_at: Optional[datetime] = None
+        self.due_date: Optional[datetime] = None
+        self.start_date: Optional[datetime] = None
+        self.end_date: Optional[datetime] = None
+        self.hex_color: Optional[str] = None
+        self.is_favorite: bool = False
+        self.percent_done: int = 0
+        self.priority: Optional[Priority] = None
+        self.project_id: Optional[int] = None
+        self.labels: List[Label] = []
+        self.assignees: List[User] = []
+        self.repeat_mode: Optional[RepeatMode] = None
+        self.repeat_after: Optional[timedelta] = None
+        self.repeat_enabled = False
+
+        self.parse_data(data)
+
+    def __eq__(self, other):
+        if not isinstance(other, Task):
+            return False
+
+        return (
+                self.id == other.id and
+                self.title == other.title and
+                self.description == other.description and
+                self.done == other.done and
+                self.done_at == other.done_at and
+                self.due_date == other.due_date and
+                self.start_date == other.start_date and
+                self.end_date == other.end_date and
+                self.hex_color == other.hex_color and
+                self.is_favorite == other.is_favorite and
+                self.percent_done == other.percent_done and
+                self.priority == other.priority and
+                self.project_id == other.project_id and
+                self.repeat_mode == other.repeat_mode and
+                self.repeat_after == other.repeat_after and
+                self.repeat_enabled == other.repeat_enabled and
+                sorted(self.labels, key=lambda x: x.id) == sorted(other.labels, key=lambda x: x.id) and
+                sorted(self.assignees, key=lambda x: x.id) == sorted(other.assignees, key=lambda x: x.id)
+        )
+
+    def parse_data(self, data):
+        self.data = data
+        self.id: int = data.get('id', -1)
         self.title: str = data.get('title', '')
         self.description: str = data.get('description', '')
         self.done: bool = data.get('done', False)
@@ -63,7 +111,7 @@ class Task(BaseModel):
         updated_data = await self.api.update_task(self.id, combined)
 
         # Update the local data with the response
-        self.data = updated_data
+        self.parse_data(updated_data)
 
         return self
 
