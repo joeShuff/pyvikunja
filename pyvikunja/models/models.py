@@ -12,7 +12,13 @@ class BaseModel:
     def _parse_datetime(date_str: Optional[str]) -> Optional[datetime]:
         if date_str:
             try:
-                return datetime.fromisoformat(date_str.rstrip('Z'))
-            except ValueError:
+                date = datetime.fromisoformat(date_str.rstrip('Z'))
+                epoch_seconds = int(date.timestamp())
+
+                if epoch_seconds == 0:
+                    return None
+                else:
+                    return date
+            except ValueError as e:
                 return None
         return None
