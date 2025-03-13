@@ -24,11 +24,12 @@ class APIError(Exception):
 
 
 class VikunjaAPI:
-    def __init__(self, base_url: str, token: str):
+    def __init__(self, base_url: str, token: str, strict_ssl: bool = True):
         self.host = self._normalize_host(base_url)
         self.api_base_url = self._normalize_api_base_url(self.host)
         self.headers = {"Authorization": f"Bearer {token}"}
-        self.client = httpx.AsyncClient()
+        self.strict_ssl = strict_ssl
+        self.client = httpx.AsyncClient(verify=strict_ssl)
 
     @property
     def web_ui_link(self):
