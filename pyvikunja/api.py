@@ -1,4 +1,5 @@
 import logging
+from functools import cached_property
 from typing import List, Dict, Any, Optional
 from urllib.parse import urlparse, urlunparse
 
@@ -29,7 +30,11 @@ class VikunjaAPI:
         self.api_base_url = self._normalize_api_base_url(self.host)
         self.headers = {"Authorization": f"Bearer {token}"}
         self.strict_ssl = strict_ssl
-        self.client = httpx.AsyncClient(verify=strict_ssl)
+
+    @cached_property
+    def client(self) -> httpx.AsyncClient:
+        """Lazily instantiate the HTTP client when first accessed."""
+        return httpx.AsyncClient(verify=self.strict_ssl)
 
     @property
     def web_ui_link(self):
