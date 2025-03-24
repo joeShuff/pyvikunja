@@ -64,14 +64,18 @@ class VikunjaAPI:
             return f"{host}/api/v1"
         return host
 
-
     async def _request(self, method: str, endpoint: str, params: Optional[Dict] = None, data: Optional[Dict] = None) -> \
-    Optional[Any]:
+    Optional[Dict[str, Any]]:
         url = f"{self.api_base_url}{endpoint}"
         try:
             response = await self.client.request(method, url, headers=self.headers, params=params, json=data)
             response.raise_for_status()
-            return response.json()
+
+            # Return JSON data and headers
+            return {
+                "data": response.json(),
+                "headers": response.headers
+            }
         except httpx.HTTPStatusError as e:
             logger.error(f"HTTP error occurred: {e.response.status_code} | {e.response.text} | URL: {url}")
         except httpx.RequestError as e:
@@ -96,76 +100,105 @@ class VikunjaAPI:
         except httpx.HTTPError as e:
             raise e
 
+    async def get_paginated_data(self, endpoint: str) -> List[Dict[str, Any]]:
+        all_data = []
+        page = 1
+        per_page = 20
+
+        while True:
+            response = await self._request("GET", endpoint, params={"page": page, "per_page": per_page})
+            if not response:
+                break
+
+            all_data.extend(response["data"])
+            total_pages = int(response["headers"].get("x-pagination-total-pages", 1))
+            if page >= total_pages:
+                break
+
+            page += 1
+
+        return all_data
+
     # Projects
-    async def get_projects(self, page: int = 1, per_page: int = 20) -> List[Project]:
-        response = await self._request("GET", "/projects", params={"page": page, "per_page": per_page})
-        return [Project(self, project_data) for project_data in response or []]
+    async def get_projects(self) -> List[Project]:
+        data = await self.get_paginated_data("/projects")
+        return [Project(self, project) for project in data]
 
     async def get_project(self, project_id: int) -> Optional[Project]:
         response = await self._request("GET", f"/projects/{project_id}")
-        return Project(self, response)
+        return Project(self, response['data'])
 
     async def create_project(self, project: Dict) -> Optional[Dict]:
-        return await self._request("PUT", "/projects", data=project)
+        result = await self._request("PUT", "/projects", data=project)
+        return result['data']
 
     async def update_project(self, project_id: int, project: Dict) -> Optional[Dict]:
-        return await self._request("POST", f"/projects/{project_id}", data=project)
+        result = await self._request("POST", f"/projects/{project_id}", data=project)
+        return result['data']
 
     async def delete_project(self, project_id: int) -> Optional[Dict]:
-        return await self._request("DELETE", f"/projects/{project_id}")
+        result = await self._request("DELETE", f"/projects/{project_id}")
+        return result['data']
 
     # Tasks
-    async def get_tasks(self, project_id: int, page: int = 1, per_page: int = 20) -> List[Task]:
-        response = await self._request("GET", f"/projects/{project_id}/tasks",
-                                       params={"page": page, "per_page": per_page})
+    async def get_tasks(self, project_id: int) -> List[Task]:
+        response = await self.get_paginated_data(f"/projects/{project_id}/tasks")
         return [Task(self, task_data) for task_data in response or []]
 
     async def get_task(self, task_id: int) -> Task:
         data = await self._request("GET", f"/tasks/{task_id}")
-        return Task(self, data)
+        return Task(self, data['data'])
 
     async def create_task(self, project_id: int, task: Dict) -> Optional[Dict]:
-        return await self._request("PUT", f"/projects/{project_id}/tasks", data=task)
+        result = await self._request("PUT", f"/projects/{project_id}/tasks", data=task)
+        return result['data']
 
     async def update_task(self, task_id: int, task: Dict) -> Optional[Dict]:
-        return await self._request("POST", f"/tasks/{task_id}", data=task)
+        result = await self._request("POST", f"/tasks/{task_id}", data=task)
+        return result['data']
 
     async def delete_task(self, task_id: int) -> Optional[Dict]:
-        return await self._request("DELETE", f"/tasks/{task_id}")
+        result = await self._request("DELETE", f"/tasks/{task_id}")
+        return result['data']
 
     # Labels
-    async def get_labels(self, page: int = 1, per_page: int = 20) -> List[Label]:
-        response = await self._request("GET", "/labels", params={"page": page, "per_page": per_page})
+    async def get_labels(self) -> List[Label]:
+        response = await self.get_paginated_data("/labels")
         return [Label(label_data) for label_data in response or []]
 
     async def get_label(self, label_id: int) -> Optional[Dict]:
-        return await self._request("GET", f"/labels/{label_id}")
+        result = await self._request("GET", f"/labels/{label_id}")
+        return result['data']
 
     async def create_label(self, label: Dict) -> Optional[Dict]:
-        return await self._request("PUT", "/labels", data=label)
+        result = await self._request("PUT", "/labels", data=label)
+        return result['data']
 
     async def update_label(self, label_id: int, label: Dict) -> Optional[Dict]:
-        return await self._request("PUT", f"/labels/{label_id}", data=label)
+        result = await self._request("PUT", f"/labels/{label_id}", data=label)
+        return result['data']
 
     async def delete_label(self, label_id: int) -> Optional[Dict]:
-        return await self._request("DELETE", f"/labels/{label_id}")
+        result = await self._request("DELETE", f"/labels/{label_id}")
+        return result['data']
 
     # Teams
-    async def get_teams(self, page: int = 1, per_page: int = 20) -> List[Team]:
-        response = await self._request("GET", "/teams", params={"page": page, "per_page": per_page})
+    async def get_teams(self) -> List[Team]:
+        response = await self.get_paginated_data("/teams")
         return [Team(self, team_data) for team_data in response or []]
 
     async def get_team(self, team_id: int) -> Optional[Team]:
         response = await self._request("GET", f"/teams/{team_id}")
-        return Team(self, response)
+        return Team(self, response['data'])
 
     async def create_team(self, team: Dict) -> Optional[Team]:
         response = await self._request("PUT", "/teams", data=team)
-        return Team(self, response)
+        return Team(self, response['data'])
 
     async def update_team(self, team_id: int, team: Dict) -> Optional[Team]:
         response = await self._request("POST", f"/teams/{team_id}", data=team)
-        return Team(self, response)
+        return Team(self, response['data'])
 
     async def delete_team(self, team_id: int) -> Optional[Team]:
-        return await self._request("DELETE", f"/teams/{team_id}")
+        result = await self._request("DELETE", f"/teams/{team_id}")
+        return result['data']

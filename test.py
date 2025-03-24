@@ -24,9 +24,8 @@ async def main():
             full_details = await api.get_task(task_id=task.id)
             print(f"  Task: {task.title} - {full_details}")
 
-    test_task = await api.get_task(12)
+    test_task = await api.get_task(17)
 
-    # await test_task.set_priority(3)
     await test_task.set_color("ffff00")
     await test_task.set_progress(40)
     await test_task.set_due_date(datetime.datetime.now() + datetime.timedelta(days=4))

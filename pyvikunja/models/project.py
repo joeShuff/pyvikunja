@@ -15,8 +15,8 @@ class Project(BaseModel):
         self.hex_color: Optional[str] = data.get('hex_color')
         self.owner: 'User' = User(data.get('owner') or {})
 
-    async def get_tasks(self, page: int = 1, per_page: int = 20) -> List['Task']:
-        return await self.api.get_tasks(self.id, page, per_page)
+    async def get_tasks(self) -> List['Task']:
+        return await self.api.get_tasks(self.id)
 
     async def create_task(self, task: Dict) -> 'Task':
         from pyvikunja.models.task import Task
