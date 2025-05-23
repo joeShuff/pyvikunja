@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, Dict
 
 
@@ -15,10 +15,13 @@ class BaseModel:
                 date = datetime.fromisoformat(date_str.rstrip('Z'))
                 epoch_seconds = int(date.timestamp())
 
+                utc_time = date.replace(tzinfo=timezone.utc)
+                local_time = utc_time.astimezone()
+
                 if epoch_seconds == 0:
                     return None
                 else:
-                    return date
+                    return local_time
             except ValueError as e:
                 return None
         return None
