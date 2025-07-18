@@ -17,7 +17,7 @@ class BaseModel:
 
                 local_time = date.astimezone()
 
-                if epoch_seconds == 0:
+                if epoch_seconds <= 0:
                     return None
                 else:
                     return local_time
