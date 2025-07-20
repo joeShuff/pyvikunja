@@ -12,13 +12,12 @@ class BaseModel:
     def _parse_datetime(date_str: Optional[str]) -> Optional[datetime]:
         if date_str:
             try:
-                date = datetime.fromisoformat(date_str.rstrip('Z'))
+                date = datetime.fromisoformat(date_str.replace('Z', '+00:00'))
                 epoch_seconds = int(date.timestamp())
 
-                utc_time = date.replace(tzinfo=timezone.utc)
-                local_time = utc_time.astimezone()
+                local_time = date.astimezone()
 
-                if epoch_seconds == 0:
+                if epoch_seconds <= 0:
                     return None
                 else:
                     return local_time
