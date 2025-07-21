@@ -15,12 +15,12 @@ class BaseModel:
                 date = datetime.fromisoformat(date_str.replace('Z', '+00:00'))
                 epoch_seconds = int(date.timestamp())
 
-                local_time = date.astimezone()
-
                 if epoch_seconds <= 0:
                     return None
-                else:
-                    return local_time
-            except ValueError as e:
+
+                local_time = date.astimezone()
+                return local_time
+            except Exception as e:
+                print(f"Error parsing date {date_str}")
                 return None
         return None
