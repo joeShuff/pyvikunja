@@ -25,15 +25,18 @@ class APIError(Exception):
 
 
 class VikunjaAPI:
-    def __init__(self, base_url: str, token: str, strict_ssl: bool = True):
+    def __init__(self, base_url: str, token: str, strict_ssl: bool = True, client: Optional[httpx.AsyncClient] = None):
         self.host = self._normalize_host(base_url)
         self.api_base_url = self._normalize_api_base_url(self.host)
         self.headers = {"Authorization": f"Bearer {token}"}
         self.strict_ssl = strict_ssl
+        self._client = client
 
     @cached_property
     def client(self) -> httpx.AsyncClient:
         """Lazily instantiate the HTTP client when first accessed."""
+        if self._client:
+            return self._client
         return httpx.AsyncClient(verify=self.strict_ssl)
 
     @property
