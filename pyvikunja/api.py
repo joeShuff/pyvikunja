@@ -68,7 +68,7 @@ class VikunjaAPI:
         return host
 
     async def _request(self, method: str, endpoint: str, params: Optional[Dict] = None, data: Optional[Dict] = None) -> \
-    Optional[Dict[str, Any]]:
+    Dict[str, Any]:
         url = f"{self.api_base_url}{endpoint}"
         try:
             response = await self.client.request(method, url, headers=self.headers, params=params, json=data)
@@ -80,12 +80,14 @@ class VikunjaAPI:
                 "headers": response.headers
             }
         except httpx.HTTPStatusError as e:
-            logger.error(f"HTTP error occurred: {e.response.status_code} | {e.response.text} | URL: {url}")
+            logger.debug(f"HTTP error occurred: {e.response.status_code} | {e.response.text} | URL: {url}")
+            raise APIError(e.response.status_code, f"HTTP error: {e.response.text}") from e
         except httpx.RequestError as e:
-            logger.error(f"Request error occurred: {e} | URL: {url}")
+            logger.debug(f"Request error occurred: {e} | URL: {url}")
+            raise APIError(0, f"Request error: {e}") from e
         except Exception as e:
-            logger.error(f"Unexpected error occurred: {e} | URL: {url}")
-        return None
+            logger.debug(f"Unexpected error occurred: {e} | URL: {url}")
+            raise APIError(0, f"Unexpected error: {e}") from e
 
     async def ping(self) -> bool:
         """Tests if the API key is valid by calling the /projects endpoint."""
