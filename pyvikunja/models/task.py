@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta, timezone
 from typing import Dict, Optional, List
 
+from pyvikunja.models.bucket import Bucket
 from pyvikunja.models.enum.repeat_mode import RepeatMode
 from pyvikunja.models.enum.task_priority import Priority
 from pyvikunja.models.label import Label
@@ -31,6 +32,8 @@ class Task(BaseModel):
         self.repeat_mode: Optional[RepeatMode] = None
         self.repeat_after: Optional[timedelta] = None
         self.repeat_enabled = False
+        self.bucket_id: Optional[int] = None
+        self.buckets: List[Bucket] = []
 
         self.parse_data(data)
 
@@ -55,8 +58,10 @@ class Task(BaseModel):
                 self.repeat_mode == other.repeat_mode and
                 self.repeat_after == other.repeat_after and
                 self.repeat_enabled == other.repeat_enabled and
+                self.bucket_id == other.bucket_id and
                 sorted(self.labels, key=lambda x: x.id) == sorted(other.labels, key=lambda x: x.id) and
-                sorted(self.assignees, key=lambda x: x.id) == sorted(other.assignees, key=lambda x: x.id)
+                sorted(self.assignees, key=lambda x: x.id) == sorted(other.assignees, key=lambda x: x.id) and
+                sorted(self.buckets, key=lambda x: x.id) == sorted(other.buckets, key=lambda x: x.id)
         )
 
     def parse_data(self, data):
@@ -87,6 +92,12 @@ class Task(BaseModel):
         # Parse repeat_after into timedelta
         self.repeat_after: Optional[timedelta] = self._parse_repeat_after(data.get('repeat_after'))
         self.repeat_enabled = self.repeat_after is not None
+
+        # Parse bucket_id on each task
+        bucket_id = data.get('bucket_id')
+        self.bucket_id: Optional[int] = bucket_id if bucket_id not in (None, 0) else None
+        # Parse expand=buckets response for cases where it is returned
+        self.buckets: List[Bucket] = [Bucket(bucket_data) for bucket_data in data.get('buckets', []) or []]
 
     def _parse_repeat_mode(self, mode: Optional[int]) -> Optional[RepeatMode]:
         """Convert repeat_mode integer into an Enum value, defaulting to NONE."""
@@ -139,6 +150,10 @@ class Task(BaseModel):
     async def move_to_project(self, project_id: int) -> 'Task':
         # Move the task to a new project
         return await self.update({'project_id': project_id})
+
+    async def set_bucket(self, bucket_id: int) -> 'Task':
+        # Move the task to a bucket within the same project view
+        return await self.update({'bucket_id': bucket_id})
 
     async def set_due_date(self, date: datetime) -> 'Task':
         # Set the task's due date in ISO format
