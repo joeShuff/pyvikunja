@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import AsyncMock, MagicMock
 
-from pyvikunja.api import VikunjaAPI
+from pyvikunja.api import APIError, VikunjaAPI
 from pyvikunja.models.label import Label
 from pyvikunja.models.task import Task
 
@@ -64,8 +64,25 @@ class TestLabelAPI(unittest.IsolatedAsyncioTestCase):
 
 
 class TestTaskLabelMethods(unittest.IsolatedAsyncioTestCase):
-    # Checks to ensure the broken task_update method of label introduce is not reintroduced
+    async def test_add_label_treats_duplicate_as_success(self):
+        # Implicitly checks that duplicate label errors are handled via checking task success
+        api = MagicMock()
+        api.add_task_label = AsyncMock(
+            side_effect=APIError(400, 'HTTP error: {"code":8001,"message":"This label already exists on the task."}')
+        )
+        api.get_task = AsyncMock(return_value=Task(api, {
+            'id': 7,
+            'title': 'Task',
+            'labels': [{'id': 3, 'title': 'Bug'}],
+        }))
+        task = Task(api, {'id': 7, 'title': 'Task', 'labels': []})
+
+        await task.add_label(3)
+
+        self.assertEqual(len(task.labels), 1)
+
     async def test_add_label_does_not_use_task_update(self):
+        # Checks to ensure the broken task_update method of label introduce is not reintroduced
         api = MagicMock()
         api.add_task_label = AsyncMock()
         api.get_task = AsyncMock(return_value=Task(api, {
