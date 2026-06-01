@@ -133,8 +133,34 @@ class Task(BaseModel):
     async def assign_to_user(self, user_id: int) -> 'Task':
         return await self.update({'assignees': [user_id]})
 
-    async def add_labels(self, labels: List[int]) -> 'Task':
-        return await self.update({'labels': labels})
+    async def _refresh_from_api(self) -> 'Task':
+        refreshed = await self.api.get_task(self.id)
+        self.parse_data(refreshed.data)
+        return self
+
+    async def add_label(self, label_id: int) -> 'Task':
+        """Add a single label to this task."""
+        if label_id not in {label.id for label in self.labels}:
+            await self.api.add_task_label(self.id, label_id)
+        return await self._refresh_from_api()
+
+    async def add_labels(self, label_ids: List[int]) -> 'Task':
+        """Add one or more labels to this task without removing existing labels."""
+        existing = {label.id for label in self.labels}
+        for label_id in label_ids:
+            if label_id not in existing:
+                await self.api.add_task_label(self.id, label_id)
+        return await self._refresh_from_api()
+
+    async def remove_label(self, label_id: int) -> 'Task':
+        """Remove a label from this task."""
+        await self.api.remove_task_label(self.id, label_id)
+        return await self._refresh_from_api()
+
+    async def set_labels(self, label_ids: List[int]) -> 'Task':
+        """Replace all labels on this task with the given set."""
+        await self.api.set_task_labels(self.id, label_ids)
+        return await self._refresh_from_api()
 
     async def move_to_project(self, project_id: int) -> 'Task':
         # Move the task to a new project
