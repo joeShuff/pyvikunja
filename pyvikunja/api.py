@@ -187,6 +187,7 @@ class VikunjaAPI:
         result = await self._request("DELETE", f"/labels/{label_id}")
         return result['data']
 
+    # Task-label interactions
     async def get_task_labels(self, task_id: int) -> List[Label]:
         response = await self.get_paginated_data(f"/tasks/{task_id}/labels")
         return [Label(label_data) for label_data in response or []]
@@ -202,7 +203,7 @@ class VikunjaAPI:
         await self._request("DELETE", f"/tasks/{task_id}/labels/{label_id}")
 
     async def set_task_labels(self, task_id: int, label_ids: List[int]) -> List[Label]:
-        """Replace all labels on a task. Labels not in label_ids are removed."""
+        # Replace all labels on a task. Labels not in label_ids are removed
         await self._request(
             "POST",
             f"/tasks/{task_id}/labels/bulk",
