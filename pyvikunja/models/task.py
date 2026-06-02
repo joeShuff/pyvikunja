@@ -133,13 +133,15 @@ class Task(BaseModel):
     async def assign_to_user(self, user_id: int) -> 'Task':
         return await self.update({'assignees': [user_id]})
 
+    # Label-task interactions require direct API calls because Vikunja ignores `labels` on task update
     async def _refresh_from_api(self) -> 'Task':
+        # Refresh the task from the API
         refreshed = await self.api.get_task(self.id)
         self.parse_data(refreshed.data)
         return self
 
     async def add_label(self, label_id: int) -> 'Task':
-        """Add a single label to this task."""
+        # Add a single label to this task
         if label_id not in {label.id for label in self.labels}:
             await self.api.add_task_label(self.id, label_id)
         return await self._refresh_from_api()
