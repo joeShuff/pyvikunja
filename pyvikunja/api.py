@@ -187,6 +187,37 @@ class VikunjaAPI:
         result = await self._request("DELETE", f"/labels/{label_id}")
         return result['data']
 
+    # Task-label interactions
+    async def get_task_labels(self, task_id: int) -> List[Label]:
+        response = await self.get_paginated_data(f"/tasks/{task_id}/labels")
+        return [Label(label_data) for label_data in response or []]
+
+    async def add_task_label(self, task_id: int, label_id: int) -> None:
+        try:
+            await self._request(
+                "PUT",
+                f"/tasks/{task_id}/labels",
+                data={"label_id": label_id},
+            )
+        except APIError as exc:
+            # Vikunja returns 400 when attempting to add a label that is already present.
+            # Treat this as success to make label assignment idempotent for callers.
+            if exc.status_code == 400 and "already exists" in exc.message.lower():
+                return
+            raise
+
+    async def remove_task_label(self, task_id: int, label_id: int) -> None:
+        await self._request("DELETE", f"/tasks/{task_id}/labels/{label_id}")
+
+    async def set_task_labels(self, task_id: int, label_ids: List[int]) -> List[Label]:
+        # Replace all labels on a task. Labels not in label_ids are removed
+        await self._request(
+            "POST",
+            f"/tasks/{task_id}/labels/bulk",
+            data={"labels": [{"id": label_id} for label_id in label_ids]},
+        )
+        return await self.get_task_labels(task_id)
+
     # Teams
     async def get_teams(self) -> List[Team]:
         response = await self.get_paginated_data("/teams")
