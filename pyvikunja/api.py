@@ -5,6 +5,7 @@ from urllib.parse import urlparse, urlunparse
 
 import httpx
 
+from pyvikunja.models.bucket import Bucket
 from pyvikunja.models.label import Label
 from pyvikunja.models.project import Project
 from pyvikunja.models.task import Task
@@ -105,13 +106,22 @@ class VikunjaAPI:
         except httpx.HTTPError as e:
             raise e
 
-    async def get_paginated_data(self, endpoint: str) -> List[Dict[str, Any]]:
+    # extra_params is needed for the 'expand' parameter in get_tasks. None by default
+    async def get_paginated_data(
+            self,
+            endpoint: str,
+            extra_params: Optional[Dict[str, Any]] = None,
+    ) -> List[Dict[str, Any]]:
         all_data = []
         page = 1
         per_page = 20
 
         while True:
-            response = await self._request("GET", endpoint, params={"page": page, "per_page": per_page})
+            params = {"page": page, "per_page": per_page}
+            if extra_params:
+                params.update(extra_params)
+
+            response = await self._request("GET", endpoint, params=params)
             if not response:
                 break
 
@@ -146,11 +156,17 @@ class VikunjaAPI:
         return result['data']
 
     # Tasks
-    async def get_tasks(self, project_id: int) -> List[Task]:
-        response = await self.get_paginated_data(f"/projects/{project_id}/tasks")
+    # expand, when set, requests the expanded buckets array
+    async def get_tasks(self, project_id: int, expand: Optional[str] = None) -> List[Task]:
+        extra_params = {"expand": expand} if expand else None
+        response = await self.get_paginated_data(
+            f"/projects/{project_id}/tasks",
+            extra_params=extra_params,
+        )
         return [Task(self, task_data) for task_data in response or []]
 
     async def get_task(self, task_id: int) -> Task:
+        # Often does not return bucket_id
         data = await self._request("GET", f"/tasks/{task_id}")
         return Task(self, data['data'])
 
@@ -165,6 +181,52 @@ class VikunjaAPI:
     async def delete_task(self, task_id: int) -> Optional[Dict]:
         result = await self._request("DELETE", f"/tasks/{task_id}")
         return result['data']
+
+    # Buckets
+    async def get_project_buckets(self, project_id: int, view_id: int) -> List[Bucket]:
+        response = await self._request("GET", f"/projects/{project_id}/views/{view_id}/buckets")
+        return [Bucket(bucket_data) for bucket_data in response['data'] or []]
+
+    async def get_kanban_task_bucket_map(self, project_id: int, view_id: int) -> Dict[int, int]:
+        """
+        Map task_id -> bucket_id for tasks on a kanban view.
+        Uses GET /projects/{id}/views/{view}/tasks, which returns buckets with nested
+        tasks. bucket_id is often omitted on flat project task lists and on GET /tasks/{id}.
+        """
+        response = await self._request("GET", f"/projects/{project_id}/views/{view_id}/tasks")
+        data = response["data"]
+        task_to_bucket: Dict[int, int] = {}
+        if not isinstance(data, list):
+            return task_to_bucket
+        if data and isinstance(data[0], dict) and "tasks" in data[0]:
+            for bucket_data in data:
+                bucket_id = bucket_data.get("id")
+                if bucket_id is None:
+                    continue
+                for task_data in bucket_data.get("tasks") or []:
+                    task_id = task_data.get("id")
+                    if task_id is not None:
+                        task_to_bucket[task_id] = bucket_id
+        return task_to_bucket 
+
+    async def move_task_to_bucket(
+        # Move a task into a bucket using the view-scoped bucket endpoint
+            self,
+            project_id: int,
+            view_id: int,
+            bucket_id: int,
+            task_id: int,
+    ) -> Task:
+        response = await self._request(
+            "POST",
+            f"/projects/{project_id}/views/{view_id}/buckets/{bucket_id}/tasks",
+            data={"task_id": task_id},
+        )
+        task_data = response['data'].get('task') if isinstance(response['data'], dict) else None
+        if task_data:
+            return Task(self, task_data)
+
+        return await self.get_task(task_id)
 
     # Labels
     async def get_labels(self) -> List[Label]:
@@ -200,8 +262,10 @@ class VikunjaAPI:
                 data={"label_id": label_id},
             )
         except APIError as exc:
-            # Vikunja returns 400 when attempting to add a label that is already present.
-            # Treat this as success to make label assignment idempotent for callers.
+            """
+            Vikunja returns 400 when attempting to add a label that is already present.
+            Treat this as success to make label assignment idempotent for callers.
+            """
             if exc.status_code == 400 and "already exists" in exc.message.lower():
                 return
             raise
