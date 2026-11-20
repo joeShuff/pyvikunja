@@ -2,6 +2,7 @@ import unittest
 from unittest.mock import AsyncMock, MagicMock
 
 from pyvikunja.api import APIError, VikunjaAPI
+from pyvikunja.models.project import Project
 from pyvikunja.models.task import Task
 from pyvikunja.models.user import User
 
@@ -139,6 +140,29 @@ class TestUserLookupAPI(unittest.IsolatedAsyncioTestCase):
 
         api._request.assert_awaited_once_with('GET', '/projects/4/projectusers', params={'s': 'bo'})
         self.assertEqual([user.id for user in users], [2])
+
+
+class TestProjectUserMethods(unittest.IsolatedAsyncioTestCase):
+    async def test_get_users(self):
+        api = MagicMock()
+        api.get_project_users = AsyncMock(return_value=[
+            User({'id': 1, 'username': 'alice'}),
+        ])
+        project = Project(api, {'id': 4, 'title': 'Home'})
+
+        users = await project.get_users()
+
+        api.get_project_users.assert_awaited_once_with(4, None)
+        self.assertEqual([user.id for user in users], [1])
+
+    async def test_get_users_with_search(self):
+        api = MagicMock()
+        api.get_project_users = AsyncMock(return_value=[])
+        project = Project(api, {'id': 4, 'title': 'Home'})
+
+        await project.get_users(search='bo')
+
+        api.get_project_users.assert_awaited_once_with(4, 'bo')
 
 
 class TestTaskAssigneeMethods(unittest.IsolatedAsyncioTestCase):
