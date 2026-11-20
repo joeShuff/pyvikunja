@@ -18,6 +18,10 @@ class Project(BaseModel):
     async def get_tasks(self) -> List['Task']:
         return await self.api.get_tasks(self.id)
 
+    async def get_users(self, search: Optional[str] = None) -> List['User']:
+        # All users with access to this project, optionally filtered by name/username/email
+        return await self.api.get_project_users(self.id, search)
+
     async def create_task(self, task: Dict) -> 'Task':
         from pyvikunja.models.task import Task
         task_data = await self.api.create_task(self.id, task)

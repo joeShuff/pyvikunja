@@ -9,6 +9,7 @@ from pyvikunja.models.label import Label
 from pyvikunja.models.project import Project
 from pyvikunja.models.task import Task
 from pyvikunja.models.team import Team
+from pyvikunja.models.user import User
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -217,6 +218,56 @@ class VikunjaAPI:
             data={"labels": [{"id": label_id} for label_id in label_ids]},
         )
         return await self.get_task_labels(task_id)
+
+    # Task-assignee interactions
+    async def get_task_assignees(self, task_id: int) -> List[User]:
+        response = await self.get_paginated_data(f"/tasks/{task_id}/assignees")
+        return [User(user_data) for user_data in response or []]
+
+    async def add_task_assignee(self, task_id: int, user_id: int) -> None:
+        try:
+            await self._request(
+                "PUT",
+                f"/tasks/{task_id}/assignees",
+                data={"user_id": user_id},
+            )
+        except APIError as exc:
+            # Vikunja returns 400 (code 4021) when the user is already assigned to the task.
+            # Treat this as success to make assignment idempotent for callers.
+            if exc.status_code == 400 and (
+                    '"code":4021' in exc.message.replace(" ", "")
+                    or "already assigned" in exc.message.lower()
+            ):
+                return
+            raise
+
+    async def remove_task_assignee(self, task_id: int, user_id: int) -> None:
+        await self._request("DELETE", f"/tasks/{task_id}/assignees/{user_id}")
+
+    async def set_task_assignees(self, task_id: int, user_ids: List[int]) -> List[User]:
+        # Replace all assignees on a task. Users not in user_ids are unassigned
+        await self._request(
+            "POST",
+            f"/tasks/{task_id}/assignees/bulk",
+            data={"assignees": [{"id": user_id} for user_id in user_ids]},
+        )
+        return await self.get_task_assignees(task_id)
+
+    # Users
+    async def search_users(self, query: str) -> List[User]:
+        # Vikunja matches the exact username, or name/email only if the user made themselves discoverable.
+        # An empty query never matches anyone, so skip the request.
+        if not query or not query.strip():
+            return []
+        response = await self._request("GET", "/users", params={"s": query})
+        return [User(user_data) for user_data in response["data"] or []]
+
+    async def get_project_users(self, project_id: int, search: Optional[str] = None) -> List[User]:
+        # All users with access to the project (including owners and team members). Not paginated.
+        # Without a search, all users are returned. With a search, name/username/email are matched fuzzily.
+        params = {"s": search} if search else None
+        response = await self._request("GET", f"/projects/{project_id}/projectusers", params=params)
+        return [User(user_data) for user_data in response["data"] or []]
 
     # Teams
     async def get_teams(self) -> List[Team]:
