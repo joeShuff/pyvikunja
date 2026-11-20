@@ -253,6 +253,22 @@ class VikunjaAPI:
         )
         return await self.get_task_assignees(task_id)
 
+    # Users
+    async def search_users(self, query: str) -> List[User]:
+        # Vikunja matches the exact username, or name/email only if the user made themselves discoverable.
+        # An empty query never matches anyone, so skip the request.
+        if not query or not query.strip():
+            return []
+        response = await self._request("GET", "/users", params={"s": query})
+        return [User(user_data) for user_data in response["data"] or []]
+
+    async def get_project_users(self, project_id: int, search: Optional[str] = None) -> List[User]:
+        # All users with access to the project (including owners and team members). Not paginated.
+        # Without a search, all users are returned. With a search, name/username/email are matched fuzzily.
+        params = {"s": search} if search else None
+        response = await self._request("GET", f"/projects/{project_id}/projectusers", params=params)
+        return [User(user_data) for user_data in response["data"] or []]
+
     # Teams
     async def get_teams(self) -> List[Team]:
         response = await self.get_paginated_data("/teams")

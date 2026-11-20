@@ -87,6 +87,60 @@ class TestAssigneeAPI(unittest.IsolatedAsyncioTestCase):
         self.assertEqual([user.id for user in assignees], [1, 5])
 
 
+class TestUserLookupAPI(unittest.IsolatedAsyncioTestCase):
+    async def test_search_users(self):
+        api = VikunjaAPI('https://vikunja.example', 'token')
+        api._request = AsyncMock(return_value={'data': [
+            {'id': 1, 'username': 'alice', 'name': 'Alice'},
+        ], 'headers': {}})
+
+        users = await api.search_users('alice')
+
+        api._request.assert_awaited_once_with('GET', '/users', params={'s': 'alice'})
+        self.assertEqual(len(users), 1)
+        self.assertIsInstance(users[0], User)
+        self.assertEqual(users[0].id, 1)
+        self.assertEqual(users[0].username, 'alice')
+
+    async def test_search_users_empty_query_skips_request(self):
+        api = VikunjaAPI('https://vikunja.example', 'token')
+        api._request = AsyncMock()
+
+        self.assertEqual(await api.search_users(''), [])
+        self.assertEqual(await api.search_users('   '), [])
+        api._request.assert_not_awaited()
+
+    async def test_search_users_handles_null_response(self):
+        api = VikunjaAPI('https://vikunja.example', 'token')
+        api._request = AsyncMock(return_value={'data': None, 'headers': {}})
+
+        self.assertEqual(await api.search_users('nobody'), [])
+
+    async def test_get_project_users(self):
+        api = VikunjaAPI('https://vikunja.example', 'token')
+        api._request = AsyncMock(return_value={'data': [
+            {'id': 1, 'username': 'alice', 'name': 'Alice'},
+            {'id': 2, 'username': 'bob', 'name': 'Bob'},
+        ], 'headers': {}})
+
+        users = await api.get_project_users(project_id=4)
+
+        api._request.assert_awaited_once_with('GET', '/projects/4/projectusers', params=None)
+        self.assertEqual([user.username for user in users], ['alice', 'bob'])
+        self.assertIsInstance(users[0], User)
+
+    async def test_get_project_users_with_search(self):
+        api = VikunjaAPI('https://vikunja.example', 'token')
+        api._request = AsyncMock(return_value={'data': [
+            {'id': 2, 'username': 'bob', 'name': 'Bob'},
+        ], 'headers': {}})
+
+        users = await api.get_project_users(project_id=4, search='bo')
+
+        api._request.assert_awaited_once_with('GET', '/projects/4/projectusers', params={'s': 'bo'})
+        self.assertEqual([user.id for user in users], [2])
+
+
 class TestTaskAssigneeMethods(unittest.IsolatedAsyncioTestCase):
     async def test_add_assignee_does_not_use_task_update(self):
         # Assignees are read-only on task update, so the assignee endpoint must be used
