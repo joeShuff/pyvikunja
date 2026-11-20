@@ -1,3 +1,4 @@
+import warnings
 from datetime import datetime, timedelta, timezone
 from typing import Dict, Optional, List
 
@@ -131,7 +132,13 @@ class Task(BaseModel):
         return await self.update({'hex_color': color})
 
     async def assign_to_user(self, user_id: int) -> 'Task':
-        return await self.update({'assignees': [user_id]})
+        # Deprecated: assignees are read-only on task update, so this now adds the user via the assignee endpoint
+        warnings.warn(
+            "Task.assign_to_user is deprecated, use Task.add_assignee instead",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return await self.add_assignee(user_id)
 
     # Label-task interactions require direct API calls because Vikunja ignores `labels` on task update
     async def _refresh_from_api(self) -> 'Task':
@@ -162,6 +169,31 @@ class Task(BaseModel):
     async def set_labels(self, label_ids: List[int]) -> 'Task':
         # Replace all labels on this task with the given set
         await self.api.set_task_labels(self.id, label_ids)
+        return await self._refresh_from_api()
+
+    # Assignee-task interactions also require direct API calls because Vikunja ignores `assignees` on task update
+    async def add_assignee(self, user_id: int) -> 'Task':
+        # Assign a single user to this task
+        if user_id not in {user.id for user in self.assignees}:
+            await self.api.add_task_assignee(self.id, user_id)
+        return await self._refresh_from_api()
+
+    async def add_assignees(self, user_ids: List[int]) -> 'Task':
+        # Assign one or more users to this task without removing existing assignees
+        existing = {user.id for user in self.assignees}
+        for user_id in user_ids:
+            if user_id not in existing:
+                await self.api.add_task_assignee(self.id, user_id)
+        return await self._refresh_from_api()
+
+    async def remove_assignee(self, user_id: int) -> 'Task':
+        # Unassign a user from this task
+        await self.api.remove_task_assignee(self.id, user_id)
+        return await self._refresh_from_api()
+
+    async def set_assignees(self, user_ids: List[int]) -> 'Task':
+        # Replace all assignees on this task with the given set
+        await self.api.set_task_assignees(self.id, user_ids)
         return await self._refresh_from_api()
 
     async def move_to_project(self, project_id: int) -> 'Task':
