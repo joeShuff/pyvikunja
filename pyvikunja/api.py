@@ -9,6 +9,7 @@ from pyvikunja.models.label import Label
 from pyvikunja.models.project import Project
 from pyvikunja.models.task import Task
 from pyvikunja.models.team import Team
+from pyvikunja.models.user import User
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -217,6 +218,40 @@ class VikunjaAPI:
             data={"labels": [{"id": label_id} for label_id in label_ids]},
         )
         return await self.get_task_labels(task_id)
+
+    # Task-assignee interactions
+    async def get_task_assignees(self, task_id: int) -> List[User]:
+        response = await self.get_paginated_data(f"/tasks/{task_id}/assignees")
+        return [User(user_data) for user_data in response or []]
+
+    async def add_task_assignee(self, task_id: int, user_id: int) -> None:
+        try:
+            await self._request(
+                "PUT",
+                f"/tasks/{task_id}/assignees",
+                data={"user_id": user_id},
+            )
+        except APIError as exc:
+            # Vikunja returns 400 (code 4021) when the user is already assigned to the task.
+            # Treat this as success to make assignment idempotent for callers.
+            if exc.status_code == 400 and (
+                    '"code":4021' in exc.message.replace(" ", "")
+                    or "already assigned" in exc.message.lower()
+            ):
+                return
+            raise
+
+    async def remove_task_assignee(self, task_id: int, user_id: int) -> None:
+        await self._request("DELETE", f"/tasks/{task_id}/assignees/{user_id}")
+
+    async def set_task_assignees(self, task_id: int, user_ids: List[int]) -> List[User]:
+        # Replace all assignees on a task. Users not in user_ids are unassigned
+        await self._request(
+            "POST",
+            f"/tasks/{task_id}/assignees/bulk",
+            data={"assignees": [{"id": user_id} for user_id in user_ids]},
+        )
+        return await self.get_task_assignees(task_id)
 
     # Teams
     async def get_teams(self) -> List[Team]:
